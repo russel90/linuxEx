@@ -23,7 +23,7 @@ int main(void)
 	int input = 1;
 
 	printf("크기 입력 : ");
-	scanf_s("%d", &input);
+	scanf("%d", &input);
 	
 	arr = make_arr(arr, input);
 	setNum_arr(arr, input);
