@@ -27,8 +27,18 @@ int main(void)
     int parentsum, childsum;
     int exit_code, status;
 
+    // vfork() 시스템 호출의 특징
+    // 1. 자식 프로세스로의 가상 메모리 페이지나 페이지 테이블의 복사가 없음
+    // 대신에 자식은 성공적으로 exec()를 수행하거나 _exit()를 호출해 종료할때까지
+    // 부모의 메의 메모리를 공유
+    // 2. 부모 프로세스의 실행이 자식이 exec()나 _exit()를 실행할 때까지 중단 된다.
+    // 여기서 주목할 점은 자식 프로세스가 부모의 메모리를 사용하기 때문에, 
+    // 자식이 데이터, ㅠ비, 스택 세그먼트에 행하는 모든 변경이 부모가 실행을 재개했을 때 반영 된다.
+        
     printf("vfork program starting\n");
     pid = vfork();
+
+
 
     switch(pid){
         // 자식 프로세스 생성이 안된 경우
