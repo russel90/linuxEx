@@ -12,7 +12,6 @@ Mat frame;
 pthread_mutex_t frameLocker;
 pthread_t UpdThread;    
  
- 
 void *UpdateFrame(void *arg)
 {
     for(;;)
@@ -30,6 +29,7 @@ void *UpdateFrame(void *arg)
  
 int main(int, char**) 
 { 
+    // webcam video open
     vcap.open(0);
  
     pthread_mutex_init(&frameLocker,NULL);  
@@ -43,23 +43,23 @@ int main(int, char**)
         currentFrame = frame;
         pthread_mutex_unlock(&frameLocker);
  
-    
+        // currentframe open Y/N
         if(currentFrame.empty())
             continue;
- 
- 
-        cvtColor( currentFrame,  grayImage, COLOR_BGR2GRAY);
-        imshow("Input Image", currentFrame);
+
+        // set gramyImage
+        cvtColor(currentFrame,  grayImage, COLOR_BGR2GRAY);
         imshow("Gray Image", grayImage);
- 
+        imshow("Input Image", tempFrame);
  
         //ESC키를 누르면 쓰레드를 강제 종료후.. 프로그램 종료한다. 
         if (waitKey(20) == 27 ) 
         {
- 
+
             int ret = pthread_cancel( UpdThread );
             int status;
  
+            // pthread cancel succcess
             if (ret == 0 )
             {
                 //자동 종료    

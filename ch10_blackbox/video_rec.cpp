@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
+#include <dirent.h>
 
 #include <iostream>  
 #include "opencv/highgui.h"
@@ -18,36 +19,71 @@
 using namespace cv;
 using namespace std;
 
-char *homeDirName = "/home/russel90/blackbox";
-char *logFileName = "Log.txt";
+const char *homeDirName = "/home/russel90/blackbox";
+const char *logFileName = "Log.txt";
+const char *fileType="avi";
 
 enum time_mode {days, hours, mins, secs};
 
+// Opencv related variable
+// VideoCapture vcap;
+VideoCapture video(0);
+Mat frame;
+
+pthread_mutex_t frameLocker;
+pthread_t UpdThread;  
+
+void *UpdateFrame(void *arg)
+{
+
+    while(1){
+        Mat tempFrame;
+        video >> tempFrame;
+
+        pthread_mutex_lock(&frameLocker);
+        frame = tempFrame;
+        pthread_mutex_unlock(&frameLocker);
+    }
+
+    pthread_exit((void *)0);
+}
+
+// 파일의 크기를 저장하기 위한 변수
+long int total_size = 0;
+
+// 디렉토리 들여쓰기를 위한 디렉토리 depth 레벨 저장용
+int  indent = 0;
+
 int initialize(char *workDirName);
 bool checkWebCamConnection();
-bool createDirectory(char *homeDirName, char *workDirName);
-bool removeDirector(char *homeDirName, char *workDirName);
+bool createDirectory(char *homeDir, char *workDirName);
+bool removeDirector(char *homeDir, char *workDirName);
 
 char *getTimeStringFormat(time_mode t_mode);
 double getStorageCapacity(); 
 
 bool initlaize(char *workDirName){
+    
+    // Setting Inital Variable
+    // Home Directory 
+    // Working Directory
+
     // WebCam Connection
     if(!checkWebCamConnection()){
-        cout << "initalize: WebCam Initalize Failure" << endl;
+        fprintf(stderr, "initalize: WebCam Initalize Failure\n");
         return false;    
     }
     
     // Check storage capacilty
     // return false if storage capacity less then 30%
     if(getStorageCapacity() < 0.3){
-        cout << "initalize: storage capacity less then 30%" << endl;
+        fprintf(stderr, "initalize: storage capacity less then 30%\n");
         return false;
     }
 
     // Create Driectory
-    if(!createDirectory(homeDirName, workDirName)){
-        cout << "initalize: Create Directory Failure" << endl;
+    if(!createDirectory((char *)homeDirName, workDirName)){
+        fprintf(stderr, "initalize: Create Directory Failure\n");
         return false;
     }
     
@@ -67,7 +103,7 @@ bool checkWebCamConnection()
     return true;
 }
 
-bool createDirectory(char *homeDirName, char *workDirName)
+bool createDirectory(char *homeDir, char *workDirName)
 {
     char buffer[MAX_BUFFER_SIZE];
     memset(buffer, 0, sizeof(buffer));
@@ -83,16 +119,55 @@ bool createDirectory(char *homeDirName, char *workDirName)
     return true;
 }
 
-// Scan Dir delect oldest dir
+// delect oldest dir
+int removeOldDirName(char *path)
+{
+    struct dirent **namelist;
 
-bool removeDirector(char *homeDirName, char *workDirName)
+    int count;
+    int i;
+
+    //디렉토리 삭제 부분 구현
+    if((count = scandir(path, &namelist, NULL, alphasort)) == -1) 
+    {
+        fprintf(stderr, "removeOldDirName: %s Directory scan Error: %s\n", path, strerror(errno));
+        return -1;
+    }
+    
+    for(i = 0; i < count; i++)
+    {
+        if((!strcmp(namelist[i]->d_name, ".")) || (!strcmp(namelist[i]->d_name,"..")))
+            continue;
+        printf("removeOldDirName: Old Director Name: %s\n", namelist[i]->d_name);
+        break;
+    }
+
+    if(!removeDirector(path, namelist[i]->d_name)){
+        fprintf(stderr, "removeOldDirName: removeDirector call Error\n");
+        return -1; 
+    }
+
+    //scandir함수 내부에서 malloc을 사용하기때문에 free필요
+    for(i = 0;i<count;i++)
+        free(namelist[i]);
+
+    //namelist에 대한 메모리 해제
+    free(namelist);
+
+    return 0;
+}
+
+bool removeDirector(char *homeDir, char *workDirName)
 {
     char buffer[MAX_BUFFER_SIZE];
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer,"rm -rf %s%s", homeDirName, workDirName);
+    int flags;
 
-    if(system(buffer) != 0){
-        fprintf(stderr, "removeDirector: directory delete error: %s\n",buffer);
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer,"rm -rf %s/%s", homeDirName, workDirName);
+    fprintf(stdin, "removeDirector: path=%s\tdirName=%s\tbuffer=%s\n", homeDirName,workDirName,buffer);
+
+    if((flags = system(buffer)) != 0){
+        fprintf(stdin, "removeDirector: path=%s\tdirName=%s\tflags=%d\tbuffer=%s\n", homeDirName, workDirName, flags, buffer);
         return false;        
     }
 
@@ -141,6 +216,8 @@ double getStorageCapacity()
 {
 
 
+
+
     return 1.0;
 }
 
@@ -162,16 +239,19 @@ int writeLog(char *msg)
 	write(fd,buffer,strlen(buffer));
 
 	close(fd);
+
+    return 0;
 }
 
 int main()
 {
-    Mat frame;
+
+    // Mat frame;
     double font_scale = 1;
     char buffer[MAX_BUFFER_SIZE];
     char workDirName[MAX_BUFFER_SIZE];
     char workFileName[MAX_BUFFER_SIZE];
-    char *fileType="avi";
+    // char *fileType="avi";
     
     // initlaize();
     memset(workDirName, 0, sizeof(workDirName));
@@ -179,20 +259,13 @@ int main()
     initlaize(workDirName);
 
     //웹캡으로 부터 데이터 읽어오기 위해 준비  
-    VideoCapture video(0);
+    // VideoCapture video(0);
     if (!video.isOpened())
     {
         cout << "웹캠을 열수 없습니다." << endl;
         return -1;
     }
- 
-    // cvInitFont(폰트, 폰트이름, 글자 수평스케일, 글자 수직스케일, 기울임, 굵기) : 폰트 초기화
-    // namedWindow("input", CV_WINDOW_AUTOSIZE);
- 
-    //웹캠에서 캡쳐되는 이미지 크기를 가져옴   
-    Size size = Size((int)video.get(CAP_PROP_FRAME_WIDTH),(int)video.get(CAP_PROP_FRAME_HEIGHT));
-    video.set(CAP_PROP_FPS, 30.0);
- 
+
     //파일로 동영상을 저장하기 위한 준비  
     VideoWriter outputVideo;
     memset(workFileName, 0, sizeof(workFileName));
@@ -215,14 +288,11 @@ int main()
         video >> frame;
  
         //웹캠에서 캡처되는 속도를 가져옴
-        int fps = video.get(CAP_PROP_FPS);
-        int wait = int(1.0 / fps * 1000);
+        // int fps = video.get(CAP_PROP_FPS);
+        // int wait = int(1.0 / fps * 1000);
 
         // cvPutText(이미지, 텍스트, 출력위치, 폰트, 텍스트색상) : 텍스트를 이미지에 추가
         putText(frame, getTimeStringFormat(secs), Point(100, 100), FONT_HERSHEY_SIMPLEX, font_scale, Scalar(0,0,0), false);               
-        //화면에 영상을 보여줌
-        imshow(workFileName, frame);  
-        
         //동영상 파일에 한프레임을 저장함.  
         outputVideo << frame;
  
@@ -230,5 +300,9 @@ int main()
         if (waitKey(wait) == 27) break;
     }
  
+    removeOldDirName((char *)homeDirName);
+
+    printf("main: call exit\n");
+
     return 0;
 }
