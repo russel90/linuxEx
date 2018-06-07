@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-// #include <errno.h>
+#include <errno.h>
 #include <dirent.h>
 #include <time.h>
 #include <fcntl.h>
@@ -11,7 +11,8 @@
 #include <sys/types.h>
 #include <sys/vfs.h>
 
-#include <iostream> 
+#include <iostream>  
+#include <boost/circular_buffer.hpp>
 #include "opencv/highgui.h"
 #include "opencv2/opencv.hpp"
 
@@ -25,7 +26,7 @@
 using namespace cv;
 using namespace std;
 
-const char *homeDirName = "/home/russel90/blackbox";
+const char *homeDirName = "/home/russel/blackbox";
 const char *logFileName = "Log.txt";
 const char *fileType="avi";
 const char *MMOUNT = "/proc/mounts";
@@ -52,9 +53,15 @@ typedef struct _mountinfo
 VideoCapture video(0);
 Mat frame;
 Size size;
+int fps = video.get(CAP_PROP_FPS);
+int wait = int(1.0 / fps * 1000);
 
 pthread_mutex_t frameLocker;
-pthread_t UpdThread, FmThread;  
+pthread_t UpdThread, FmThread;
+pthread_t captureManagerThread, recorderManagerThread, fileManagerThread;
+
+// check circular buffer size
+boost::circular_buffer<Mat> cb(fps*60*10);
 
 // 파일의 크기를 저장하기 위한 변수
 long int total_size = 0;
@@ -73,6 +80,9 @@ double getStorageUsage();
 bool initialize(){
     
     // Setting Inital Variable if required
+    //웹캠에서 캡쳐되는 이미지 크기를 가져옴   
+    size = Size((int)video.get(CAP_PROP_FRAME_WIDTH),(int)video.get(CAP_PROP_FRAME_HEIGHT));
+    video.set(CAP_PROP_FPS, 30.0);
 
     // WebCam Connection
     if(!checkWebCamConnection()){
@@ -280,7 +290,6 @@ int writeLog(char *msg)
 
     memset(buffer, 0, sizeof(buffer));
 	sprintf(buffer, "%s\t%s", getTimeStringFormat(secs), msg);
-	
 	write(fd,buffer,strlen(buffer));
 
 	close(fd);
@@ -308,7 +317,6 @@ void *UpdateFrame(void *arg)
         strcpy(workFileName, getTimeStringFormat(secs));
 
         sprintf(buffer, "%s/%s/%s.%s", homeDirName, workDirName, workFileName, fileType);
-        fflush(stdout);
         fprintf(stdout, "UpdateFrame: Working File Full Path = %s\n",buffer);
 
         outputVideo.open(buffer, VideoWriter::fourcc('X', 'V', 'I', 'D'), 30, size, true);
@@ -322,6 +330,7 @@ void *UpdateFrame(void *arg)
         while(atoi(getTimeStringFormat(persec)) != 0)
         {
             video >> tempFrame; 
+            
             // 웹캡으로부터 한 프레임을 읽어옴
             pthread_mutex_lock(&frameLocker);
             frame = tempFrame;
@@ -343,7 +352,94 @@ void *UpdateFrame(void *arg)
     pthread_exit((void *)0);
 }
 
-void *FileManager(void *arg)
+void *captureManager(void *arg)
+{
+    Mat captureFrame;
+
+    while(1){
+        video >> captureFrame;
+        
+        // currentframe open Y/N
+        if(captureFrame.empty()){
+            fprintf(stderr,"captureManager: captureFrame empty\n");
+            continue;
+        }
+        
+        Mat tmpframe;
+        // printf("captureManager: before cb called\n");
+        // pthread_mutex_lock(&frameLocker);
+        captureFrame.copyTo(tmpframe);
+        imshow("Inputs", tmpframe);
+        cb.push_back(captureFrame);
+        // pthread_mutex_unlock(&frameLocker);
+        // printf("captureManager: cb called\n");
+
+        // captureFrame.copyTo(frame);
+        
+        // std::cout << "captureManager : " << cb.capacity() << '\n';
+        // std::cout << "captureManager : " << cb.size() << '\n';
+        
+        waitKey(wait);
+    }
+    pthread_exit((void *)0);
+}
+
+void *recorderManager(void *arg)
+{
+    char workDirName[MAX_BUFFER_SIZE];    
+    char workFileName[MAX_BUFFER_SIZE];
+    char buffer[MAX_BUFFER_SIZE];
+
+    Mat recordFrame;
+    VideoWriter outputVideo;    
+
+    while(1){
+        //get working directory
+        memset(workDirName, 0, sizeof(workDirName));
+        strcpy(workDirName, getTimeStringFormat(hours));
+        createDirectory((char *)homeDirName,workDirName);
+        
+        // get working file name
+        memset(workFileName, 0, sizeof(workFileName));
+        strcpy(workFileName, getTimeStringFormat(secs));
+
+        sprintf(buffer, "%s/%s/%s.%s", homeDirName, workDirName, workFileName, fileType);
+        fprintf(stdout, "recorderManager: Working File Full Path = %s\n",buffer);
+
+        outputVideo.open(buffer, VideoWriter::fourcc('X', 'V', 'I', 'D'), 30, size, true);    
+
+        if (!outputVideo.isOpened())
+        {
+            fprintf(stderr, "recorderManager: outputVideo open error\n");;
+            exit(0);
+        }
+        
+        while(atoi(getTimeStringFormat(persec)) != 0){
+            if(!cb.empty()){
+                // printf("recorderManager: before cb called\n");
+                // pthread_mutex_lock(&frameLocker);
+                recordFrame = cb.front();
+                // pthread_mutex_unlock(&frameLocker);
+                // printf("recorderManager: cb called\n");
+
+                putText(recordFrame, getTimeStringFormat(secs), Point(100, 100), FONT_HERSHEY_SIMPLEX, 1, Scalar(0,0,0), false);
+                // imshow("write", recordFrame);
+                recordFrame.copyTo(frame); 
+                outputVideo << recordFrame;
+                // scan(recordFrame);
+                // frame = recordFrame;
+
+                // std::cout << "recorderManager: " << cb.capacity() << '\n';
+                // std::cout << "recorderManager: " << cb.size() << '\n';
+
+            }    // waitKey(wait);
+        }
+        outputVideo.release();
+    }
+    pthread_exit((void *)0);
+}
+
+void *fileManger(void *arg)
 {
     while(1){
         sleep(MAX_SLEEP_TIME);
@@ -363,61 +459,70 @@ int main()
     {
         fprintf(stderr, "웹캠을 열수 없습니다.\n");
         return -1;
-    }    
+    }
+
+    //웹캠에서 캡쳐되는 이미지 크기를 가져옴   
+    // size = Size((int)video.get(CAP_PROP_FRAME_WIDTH),(int)video.get(CAP_PROP_FRAME_HEIGHT));
+    // video.set(CAP_PROP_FPS, 30.0);
 
     //웹캠에서 캡쳐되는 이미지 크기를 가져옴   
     size = Size((int)video.get(CAP_PROP_FRAME_WIDTH),(int)video.get(CAP_PROP_FRAME_HEIGHT));
     video.set(CAP_PROP_FPS, 30.0);
 
     pthread_mutex_init(&frameLocker,NULL);  
-    pthread_create(&UpdThread, NULL, UpdateFrame, NULL);
-    fprintf(stdout, "main: UpdThread Created\n");
+    pthread_create(&captureManagerThread, NULL, captureManager, NULL);
+    fprintf(stdout, "main: captureManagerThread Created\n");
+    
+    pthread_create(&recorderManagerThread, NULL, recorderManager, NULL);
+    fprintf(stdout, "main: recorderManagerThread Created\n");
 
-    pthread_create(&FmThread, NULL, FileManager, NULL);    
-    fprintf(stdout, "main: FmThread Created\n");
+    pthread_create(&fileManagerThread, NULL, fileManger, NULL);    
+    fprintf(stdout, "main: fileMangerThread Created\n");
 
-    sleep(2);
+    int fps = video.get(CAP_PROP_FPS);
+    int wait = int(1.0 / fps * 1000);
 
     while(1){
-        
-        Mat currentFrame;
 
-        pthread_mutex_lock(&frameLocker);
-        currentFrame = frame;
-        pthread_mutex_unlock(&frameLocker);
+        Mat outputFrame;
 
-        imshow("Inputs", currentFrame);
+        outputFrame = frame;
 
         // currentframe open Y/N
-        if(currentFrame.empty()){
+        if(outputFrame.empty()){
             fprintf(stderr,"main: currentFrame empty\n");
             continue;
         }
 
-        int fps = video.get(CAP_PROP_FPS);
-        int wait = int(1.0 / fps * 1000);
-    
+        imshow("Output", outputFrame);
+        
         if(waitKey(wait) == 27){
             int status;
-
-            // pthread cancel succcess
-            if (pthread_cancel(UpdThread) == 0 )
+            // captureManagerThread pthread cancel succcess
+            if (pthread_cancel(captureManagerThread) == 0 )
             {
-                if (pthread_join( UpdThread, (void **)&status ) != 0 ){
-                    fprintf(stderr, "main: UpdThread close error\n");
+                if (pthread_join( captureManagerThread, (void **)&status ) != 0 ){
+                    fprintf(stderr, "main: captureManagerThread close error\n");
                     return -1;
                 }
             }
-
-            // pthread cancel succcess
-            if (pthread_cancel(FmThread) == 0 )
+            // recorderManagerThread pthread cancel succcess
+            if (pthread_cancel(recorderManagerThread) == 0 )
             {
-                if (pthread_join( FmThread, (void **)&status ) != 0 ){
-                    fprintf(stderr, "main: FmThread close error\n");
+                if (pthread_join( recorderManagerThread, (void **)&status ) != 0 ){
+                    fprintf(stderr, "main: recorderManagerThread close error\n");
+                    return -1;
+                }
+            }            
+            // fileManagerThread pthread cancel succcess
+            if (pthread_cancel(fileManagerThread) == 0 )
+            {
+                if (pthread_join( fileManagerThread, (void **)&status ) != 0 ){
+                    fprintf(stderr, "main: fileManagerThread close error\n");
                     return -1;
                 }
             }
-            break;         
+            break;    
         }
     }
     video.release();
