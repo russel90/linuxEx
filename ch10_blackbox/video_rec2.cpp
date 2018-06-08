@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-// #include <errno.h>
+#include <errno.h>
 #include <dirent.h>
 #include <time.h>
 #include <fcntl.h>
@@ -73,6 +73,9 @@ double getStorageUsage();
 bool initialize(){
     
     // Setting Inital Variable if required
+    //웹캠에서 캡쳐되는 이미지 크기를 가져옴   
+    size = Size((int)video.get(CAP_PROP_FRAME_WIDTH),(int)video.get(CAP_PROP_FRAME_HEIGHT));
+    video.set(CAP_PROP_FPS, 30.0);    
 
     // WebCam Connection
     if(!checkWebCamConnection()){
@@ -364,10 +367,6 @@ int main()
         fprintf(stderr, "웹캠을 열수 없습니다.\n");
         return -1;
     }    
-
-    //웹캠에서 캡쳐되는 이미지 크기를 가져옴   
-    size = Size((int)video.get(CAP_PROP_FRAME_WIDTH),(int)video.get(CAP_PROP_FRAME_HEIGHT));
-    video.set(CAP_PROP_FPS, 30.0);
 
     pthread_mutex_init(&frameLocker,NULL);  
     pthread_create(&UpdThread, NULL, UpdateFrame, NULL);
