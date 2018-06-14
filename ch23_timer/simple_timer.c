@@ -3,10 +3,27 @@
 #include <string.h>
 #include <sys/time.h>
 
+struct timeval StartTime, EndTime, ProcTime;
+
 void timer_handler (int signum)
 {
-        static int count = 0;
-        printf("timer expired %d timers\n", ++count);
+    static int count = 0;
+    
+
+    gettimeofday(&EndTime, NULL);
+
+    if((EndTime.tv_usec-StartTime.tv_usec) <0){
+        ProcTime.tv_sec = EndTime.tv_sec - StartTime.tv_sec - 1;
+        ProcTime.tv_sec = 1000000 + EndTime.tv_usec - StartTime.tv_usec;
+    }else{
+        ProcTime.tv_sec = EndTime.tv_sec - StartTime.tv_sec;
+        ProcTime.tv_sec = EndTime.tv_usec - StartTime.tv_usec;
+    }
+
+    printf("timer expired %d timers\t", ++count);
+    printf("Copy Time: %ld.%ldusec\n", ProcTime.tv_sec, ProcTime.tv_usec);
+
+    StartTime = EndTime;
 }
 
 int main ()
@@ -29,6 +46,8 @@ int main ()
 
         /* Start a virtual timer. It counts down whenever this process is executing. */
         setitimer (ITIMER_VIRTUAL, &timer, NULL);
+
+        gettimeofday(&StartTime, NULL);
 
         /* Do busy work.  */
         while (1);
