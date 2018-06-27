@@ -1,0 +1,32 @@
+1. Car Object Modeling
+-. Method:
+   . initialize(): 
+   . start():  
+   . brake(): S-Curve ???
+   . steering() -  barking
+   . acceleration() - acceleration, deacceleration
+   . gearpostion() - parking, forward, backword, neutral
+   
+2. Main Thread: 
+-. Initalize Device
+-. Initialize Camera
+-. Thread 1 및 Thread 2 생성
+-. Client 접속시 HTTP Service를 통해 키 입력 web page 전송
+  . 방향 조정: Delta {(Max - Min)/20}방식으로 방향 조겅
+    7(left turn - forward),  8 (forward), 9 (right-forward turn), 
+    4(left-?), 5(stop - soft-braking), 6 (right-? turn) 
+    1(right-backword turn), 2(backward), 3(left-backward turn)
+  
+  . Speed Control: Delta {(Max - Min) / 20} 방식으로 증가 및 감소 시킴
+    (+) : Speed Acceleration
+    (-) : Speed Deacceleration
+
+3. Thread 1: DriverManager
+-. Client로 부터 방향키를 받아서 Steering Method에 입력 받은 키 Value 전달
+-. Signal Dection: Clinet -> Server
+-. 
+
+4. Thread 2: CaptuerManager
+-. 카메라에서 입력 받은 화면 전송
+-. Singal Direction: Server -> Client
+-. Feature Extension: Clinet에서 Vision 처리하여 방향키 생성
