@@ -77,7 +77,7 @@ void *captureManager(void *arg)
 
     size = Size((int)video.get(CAP_PROP_FRAME_WIDTH),(int)video.get(CAP_PROP_FRAME_HEIGHT));
     video.set(CAP_PROP_FPS, 30.0);    
-    // fps = video.get(CAP_PROP_FPS);
+    fps = video.get(CAP_PROP_FPS);
     wait = int(1.0 / fps * 1000);
 
     fprintf(stdout,"captureManager: size.height = %d, size.width = %d\n", size.height, size.width);

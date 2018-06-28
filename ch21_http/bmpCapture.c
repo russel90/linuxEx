@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fcntl.h>                                               /* Low level I/O를 위해서 사용 */
+#include <fcntl.h>                                              /* Low level I/O를 위해서 사용 */
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/mman.h>

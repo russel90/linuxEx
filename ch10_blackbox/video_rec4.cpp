@@ -202,7 +202,6 @@ char *getTimeStringFormat(time_mode t_mode)
 
 double getStorageUsage()
 {
-    double storgeUsage;
 
     MOUNTP MP;
 

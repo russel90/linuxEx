@@ -21,34 +21,11 @@
 #include "opencv/highgui.h"
 #include "opencv2/opencv.hpp"
 
-#define MAX_BUFFER_SIZE 256
-#define MAX_FILE_TYPE_SIZE = 3
-#define FONT_SCALE 2
-#define MAX_STORAGE_USAGE 0.50
-#define MAX_SLEEP_TIME 300
-
 using namespace cv;
 using namespace std;
 
-enum time_mode {days, hours, mins, secs, msecs, permin, persec};
-
-struct f_size
-{
-    long blocks;
-    long avail; 
-};
-
-typedef struct _mountinfo 
-{
-    FILE *fp;               // 파일 스트림 포인터    
-    char devname[80];       // 장치 이름
-    char mountdir[80];      // 마운트 디렉토리 이름
-    char fstype[12];        // 파일 시스템 타입
-    struct f_size size;     // 파일 시스템의 총크기/사용율 
-} MOUNTP;
-
 Size size;
-int fps = 10;
+int fps;
 int wait;
 int readyCapture = 0;
 
@@ -56,9 +33,6 @@ pthread_mutex_t frameLocker;
 pthread_t captureManagerThread;
 pthread_t serverManagerThread;
 pthread_t controlManagerThread;
-
-int capDev = 0;
-// VideoCapture cap(capDev); // open the default camera
 
 // check circular buffer size
 boost::circular_buffer<Mat> cb(30*60*10);
@@ -99,7 +73,7 @@ void *captureManager(void *arg)
 		   cb.push_back(captureFrame);
 		   pthread_mutex_unlock(&frameLocker);
 
-		   //std::cout << "captureManager : cb.size() - " << cb.size() << '\n';
+		   std::cout << "captureManager : cb.size() - " << cb.size() << '\n';
 	   }	
 
        if(cvWaitKey(wait)== 27) 
@@ -118,9 +92,7 @@ void *serverManager(void *arg)
     int key;
 
     Mat img;
-    // fps = cap.get(CAP_PROP_FPS);
-    // wait = int(1.0 / fps * 1000);
-   
+
     while(!readyCapture){
         usleep(5000);
         std::cout << "serverManager: readyCapture = " << readyCapture << std::endl;
@@ -151,7 +123,6 @@ void *serverManager(void *arg)
     }
 	
 	pthread_exit((void *)0);
-
 }
 
 int main(int argc, char** argv)
