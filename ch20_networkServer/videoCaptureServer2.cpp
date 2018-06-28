@@ -74,7 +74,7 @@ void *captureManager(void *arg)
 		   cb.push_back(captureFrame);
 		   pthread_mutex_unlock(&frameLocker);
 
-		   std::cout << "captureManager : cb.size() - " << cb.size() << '\n';
+		   //std::cout << "captureManager : cb.size() - " << cb.size() << '\n';
 	   }	
 
        if(cvWaitKey(wait)== 27) 
@@ -82,7 +82,9 @@ void *captureManager(void *arg)
 	   readyCapture = 1;
     }
 
+	std::cout << "captureManager : cb.size() - " << cb.size() << '\n';
     video.release();
+	std::cout << "captureManager : cb.size() - " << cb.size() << '\n';
     pthread_exit((void *)0);
 }
 
@@ -92,13 +94,12 @@ void *serverManager(void *arg)
     int bytes = 0, imgSize;
     int key;
 
-    Mat img;
-
     while(!readyCapture){
         usleep(5000);
-        std::cout << "serverManager: readyCapture = " << readyCapture << std::endl;
+        // std::cout << "serverManager: readyCapture = " << readyCapture << std::endl;
     }
 
+    Mat img;
     img = Mat::zeros(size.height, size.width, CV_8UC3);
     imgSize = img.total() * img.elemSize();
 	std::cout << "serverManager: Image Size:" << imgSize << std::endl;
@@ -116,15 +117,38 @@ void *serverManager(void *arg)
             // send processed image
             if ((bytes = send(socket, img.data, imgSize, 0)) < 0){
               std::cerr << "serverManager: bytes = " << bytes << std::endl;
-              pthread_exit((void *)0);
               loopCnt = 0;
-	      break;
+			  fprintf(stdout, "serverManager: loopCnt = %d\n", loopCnt);
+	          break;
             } 
         }
        // if(cvWaitKey(wait)== 27) break;
     }
 	
     pthread_exit((void *)0);
+}
+
+void *controlManager(void *arg)
+{
+    int socket = *(int *)arg;
+    int bytes = 0;
+    int key;
+    while(loopCnt){
+        if(cb.size() != 0){
+            pthread_mutex_lock(&frameLocker);
+            img = cb.front();
+            cb.pop_front();
+            pthread_mutex_unlock(&frameLocker);        
+
+            // send processed image
+            if ((bytes = send(socket, img.data, imgSize, 0)) < 0){
+              std::cerr << "serverManager: bytes = " << bytes << std::endl;
+              loopCnt = 0;
+			  fprintf(stdout, "serverManager: loopCnt = %d\n", loopCnt);
+	          break;
+            } 
+        }
+        if(cvWaitKey(wait)== 27) break;
 }
 
 int main(int argc, char** argv)
@@ -175,8 +199,7 @@ int main(int argc, char** argv)
     //accept connection from an incoming client
     pthread_mutex_init(&frameLocker,NULL);
 
-    while(1){     
-     
+    while(loopCnt){      
         remoteSocket = accept(localSocket, (struct sockaddr *)&remoteAddr, (socklen_t*)&addrLen);  
         if (remoteSocket < 0) {
             perror("main: accept failed!");
@@ -195,24 +218,32 @@ int main(int argc, char** argv)
             fprintf(stderr, "main: serverManagerThread creation failed\n");
             return -1;
         }
-    }    
-        
-    // captureManagerThread pthread cancel succcess
-    if (pthread_cancel(captureManagerThread) == 0 ){
-        if (pthread_join(captureManagerThread, (void **)&status ) != 0 ){
-            fprintf(stderr, "main: captureManagerThread close error\n");
+
+        results = pthread_create(&controlManagerThread, NULL, controlManager, &remoteSocket);
+        if(results < 0){
+            fprintf(stderr, "main: controlManagerThread creation failed\n");
             return -1;
         }
-    }          
+
+	    if (pthread_join( serverManagerThread, (void **)&status ) != 0 ){
+    		fprintf(stderr, "main: serverManagerThread close error\n");
+    	    return -1;
+	    }
     
-    // serverManagerThread pthread cancel succcess
-    if (pthread_cancel(serverManagerThread) == 0 ){
-        if (pthread_join( serverManagerThread, (void **)&status ) != 0 ){
-            fprintf(stderr, "main: serverManagerThread close error\n");
-            return -1;
-        }
-     }
-    close(remoteSocket);
+		// captureManagerThread pthread cancel succcess
+	    if (pthread_join(captureManagerThread, (void **)&status ) != 0 ){
+	    	fprintf(stderr, "main: captureManagerThread close error\n");
+	        return -1;
+    	}
+
+		// controlManagerThread pthread cancel succcess
+	    if (pthread_join(controlManagerThread, (void **)&status ) != 0 ){
+	    	fprintf(stderr, "main: controlManagerThread close error\n");
+	        return -1;
+    	}
+	}
+
+	close(remoteSocket);
     close(localSocket);
 
     return 0;
