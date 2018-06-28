@@ -28,6 +28,7 @@ Size size;
 int fps;
 int wait;
 int readyCapture = 0;
+int loopCnt = 1;
 
 pthread_mutex_t frameLocker;
 pthread_t captureManagerThread;
@@ -60,7 +61,7 @@ void *captureManager(void *arg)
 
     fprintf(stdout,"captureManager: fps = %d, wait = %d\n", fps, wait);
 
-    while(1){
+    while(loopCnt){
 
        video >> captureFrame;
 
@@ -105,7 +106,7 @@ void *serverManager(void *arg)
 	wait = int(1.0 / fps * 1000);
 	std::cout << "serverManager: wait:" << wait << std::endl;
 
-    while(1){
+    while(loopCnt){
         if(cb.size() != 0){
             pthread_mutex_lock(&frameLocker);
             img = cb.front();
@@ -114,15 +115,16 @@ void *serverManager(void *arg)
 
             // send processed image
             if ((bytes = send(socket, img.data, imgSize, 0)) < 0){
-                    std::cerr << "serverManager: bytes = " << bytes << std::endl;
-               pthread_exit((void *)0);
-                    break;
+              std::cerr << "serverManager: bytes = " << bytes << std::endl;
+              pthread_exit((void *)0);
+              loopCnt = 0;
+	      break;
             } 
         }
-        if(cvWaitKey(wait)== 27) break;
+       // if(cvWaitKey(wait)== 27) break;
     }
 	
-	pthread_exit((void *)0);
+    pthread_exit((void *)0);
 }
 
 int main(int argc, char** argv)
