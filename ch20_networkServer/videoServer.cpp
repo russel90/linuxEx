@@ -1,22 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <errno.h>
-#include <dirent.h>
-#include <time.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <pthread.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/vfs.h>
-#include <sys/time.h>
 
-#include <sys/socket.h> 
 #include <arpa/inet.h>
 
-#include <iostream>  
 #include <boost/circular_buffer.hpp>
 #include "opencv/highgui.h"
 #include "opencv2/opencv.hpp"
@@ -76,14 +64,14 @@ void *captureManager(void *arg)
 		   //std::cout << "captureManager : cb.size() - " << cb.size() << '\n';
 	   }	
 
-       if(cvWaitKey(wait)== 27) 
-		   break;
+       // if(cvWaitKey(wait)== 27) 
+	   //   break;
 	   readyCapture = 1;
     }
 
 	std::cout << "captureManager : cb.size() - " << cb.size() << '\n';
     video.release();
-	std::cout << "captureManager : cb.size() - " << cb.size() << '\n';
+	std::cout << "captureManager : video.release()" << std::endl;
     pthread_exit((void *)0);
 }
 
@@ -117,34 +105,12 @@ void *serverManager(void *arg)
             if ((bytes = send(socket, img.data, imgSize, 0)) < 0){
               std::cerr << "serverManager: bytes = " << bytes << std::endl;
               loopCnt = 0;
-			  fprintf(stdout, "serverManager: loopCnt = %d\n", loopCnt);
 	          break;
             } 
         }
        // if(cvWaitKey(wait)== 27) break;
     }
 	
-    pthread_exit((void *)0);
-}
-
-void *controlManager(void *arg)
-{
-    int socket = *(int *)arg;
-    int bytes = 0;
-    int key;
-    while(loopCnt){
-   
-            // send processed image
-            if ((bytes = send(socket, img.data, imgSize, 0)) < 0){
-              std::cerr << "controlManager: bytes = " << bytes << std::endl;
-              loopCnt = 0;
-			  fprintf(stdout, "controlManager: loopCnt = %d\n", loopCnt);
-	          break;
-            } 
-
-        if(cvWaitKey(wait)== 27) break;
-    }
-
     pthread_exit((void *)0);
 }
 
@@ -188,7 +154,7 @@ int main(int argc, char** argv)
     }
     
     //Listening
-    listen(localSocket , 5);
+    listen(localSocket , 1);
     
     std::cout <<  "Waiting for connections...\n"
               <<  "Server Port:" << port << std::endl;
@@ -196,7 +162,7 @@ int main(int argc, char** argv)
     //accept connection from an incoming client
     pthread_mutex_init(&frameLocker,NULL);
 
-    while(loopCnt){      
+    while(1){      
         remoteSocket = accept(localSocket, (struct sockaddr *)&remoteAddr, (socklen_t*)&addrLen);  
         if (remoteSocket < 0) {
             perror("main: accept failed!");
@@ -217,15 +183,19 @@ int main(int argc, char** argv)
         }
 
 	    if (pthread_join( serverManagerThread, (void **)&status ) != 0 ){
+        // if (pthread_detach(serverManagerThread) != 0 ){
     		fprintf(stderr, "main: serverManagerThread close error\n");
     	    return -1;
 	    }
     
 		// captureManagerThread pthread cancel succcess
 	    if (pthread_join(captureManagerThread, (void **)&status ) != 0 ){
+        // if (pthread_detach(captureManagerThread) != 0 ){
 	    	fprintf(stderr, "main: captureManagerThread close error\n");
 	        return -1;
     	}
+
+        loopCnt = 1;
 	}
 
 	close(remoteSocket);
