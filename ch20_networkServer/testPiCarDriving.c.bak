@@ -300,12 +300,13 @@ int initialize(void)
 
 int driving(char *key)
 {
+
 	unsigned short speed = DCMOTOR_SPEED_MIN;
 	unsigned short steeringAngleValue = STEERING_SERBO_MID;
 	unsigned short panAngleValue = PAN_SERBO_MID;
 	unsigned short tiltAngleValue = TILT_SERBO_MID;
 	
-	switch(*key){
+	switch(key){
 		case ESC:
 			break;
 			
