@@ -9,7 +9,7 @@
 
 using namespace std;
 
-extern "c" int getch(void);
+extern "C" int getch(void);
 
 int main(int argc, char** argv)
 {
