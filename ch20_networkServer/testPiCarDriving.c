@@ -25,21 +25,21 @@
 #define PAN_SERBO_MIN			530
 #define PAN_SERBO_MID			330
 #define PAN_SERBO_MAX			110
-#define PAN_SERBO_DELTA	((PAN_SERBO_MIN - PAN_SERBO_MAX) / 20)
+#define PAN_SERBO_DELTA			((PAN_SERBO_MIN - PAN_SERBO_MAX) / 20)
 
 #define TILT_SERBO_MAX			143
 #define TILT_SERBO_MID			275
 #define TILT_SERBO_MIN			371
-#define TILT_SERBO_DELTA	((TILT_SERBO_MIN - TILT_SERBO_MAX) / 20)
+#define TILT_SERBO_DELTA		((TILT_SERBO_MIN - TILT_SERBO_MAX) / 20)
 
 #define STEERING_SERBO_MAX		292
 #define STEERING_SERBO_MID		232
 #define STEERING_SERBO_MIN		171
-#define STEERING_SERBO_DELTA		((STEERING_SERBO_MAX - STEERING_SERBO_MIN) / 20)
+#define STEERING_SERBO_DELTA	((STEERING_SERBO_MAX - STEERING_SERBO_MIN) / 20)
 
 #define DCMOTOR_SPEED_MAX		3686
 #define DCMOTOR_SPEED_MIN		500
-#define DCMOTOR_SPEED_DELTA	((DCMOTOR_SPEED_MAX - DCMOTOR_SPEED_MIN) / 20)
+#define DCMOTOR_SPEED_DELTA		((DCMOTOR_SPEED_MAX - DCMOTOR_SPEED_MIN) / 20)
 #define FORWARD 				1
 #define BACKWARD				-1
 
@@ -160,8 +160,8 @@ void MoveBackward(unsigned short speed)
 
 void SetSteeringAngle(unsigned short angleValue)
 {
-		reg_write16(LED7_ON_L, 0);
-		reg_write16(LED7_OFF_L, angleValue);
+	reg_write16(LED7_ON_L, 0);
+	reg_write16(LED7_OFF_L, angleValue);
 }
 
 int GetDCMortorDirection(void)
@@ -238,7 +238,7 @@ void sigHandler(int data)
 	//SLEEP
 	reg_write8(MODE1, 0x10);
 }
-
+git 
 int setDrivingInitialCondition()
 {
 	// Pan Servo Postion: Middle
@@ -262,11 +262,10 @@ int setDrivingInitialCondition()
 	return 0;	
 }
 
-int main(void)
+int draving(char *key)
 {
 	int i;
 	int freq=50;
-	char key;
 		
 	unsigned short speed = DCMOTOR_SPEED_MIN;
 	unsigned short steeringAngleValue = STEERING_SERBO_MID;
@@ -277,8 +276,10 @@ int main(void)
 	wiringPiSetup();
 	signal(SIGINT, sigHandler);
 	
-	pinMode (0, OUTPUT) ;		// BCM GPIO17
-	pinMode (2, OUTPUT) ;		// BCM GPIO27
+	// BCM GPIO17
+	pinMode (0, OUTPUT) ;
+	// BCM GPIO27		
+	pinMode (2, OUTPUT) ;		
 	
 	unsigned short value=2047;
 	if((fd=open(I2C_DEV, O_RDWR))<0)
@@ -302,148 +303,148 @@ int main(void)
 	// DC Motor CW Test
 	loop = 1;
 	while(loop){
-			key = getch();
-			switch(key){
-					case ESC:
-						break;
+		key = getch();
+		switch(key){
+			case ESC:
+				break;
+			
+			// backward 
+			case KEY_DOWN:
+				if(GetDCMortorDirection() == FORWARD) speed = DCMOTOR_SPEED_MIN;
+				
+				speed += DCMOTOR_SPEED_DELTA;
+				
+				if(speed >= DCMOTOR_SPEED_MAX){
+						speed = DCMOTOR_SPEED_MAX;
+				}else if(speed <= DCMOTOR_SPEED_MIN){
+						speed = DCMOTOR_SPEED_MIN;
+				}						
+				
+				MoveBackward(speed);					
+				break;
+				
+			// forward	
+			case KEY_UP:		
+				if(GetDCMortorDirection() == BACKWARD) speed = DCMOTOR_SPEED_MIN;
+				
+				speed += DCMOTOR_SPEED_DELTA;
+				
+				if(speed >= DCMOTOR_SPEED_MAX){
+						speed = DCMOTOR_SPEED_MAX;
+				}else if(speed <= DCMOTOR_SPEED_MIN){
+						speed = DCMOTOR_SPEED_MIN;
+				}
+				
+				MoveForward(speed);
+										
+				break;
+				
+			// left steering
+			case KEY_LEFT:
+				steeringAngleValue -= STEERING_SERBO_DELTA;
+				if(steeringAngleValue >= STEERING_SERBO_MAX){
+						steeringAngleValue = STEERING_SERBO_MAX;
+				}else if(steeringAngleValue <= STEERING_SERBO_MIN){
+						steeringAngleValue = STEERING_SERBO_MIN;
+				}
 					
-					// backward 
-					case KEY_DOWN:
-						if(GetDCMortorDirection() == FORWARD) speed = DCMOTOR_SPEED_MIN;
-						
-						speed += DCMOTOR_SPEED_DELTA;
-						
-						if(speed >= DCMOTOR_SPEED_MAX){
-								speed = DCMOTOR_SPEED_MAX;
-						}else if(speed <= DCMOTOR_SPEED_MIN){
-								speed = DCMOTOR_SPEED_MIN;
-						}						
-						
-						MoveBackward(speed);					
-						break;
-						
-					// forward	
-					case KEY_UP:		
-						if(GetDCMortorDirection() == BACKWARD) speed = DCMOTOR_SPEED_MIN;
-						
-						speed += DCMOTOR_SPEED_DELTA;
-						
-						if(speed >= DCMOTOR_SPEED_MAX){
-								speed = DCMOTOR_SPEED_MAX;
-						}else if(speed <= DCMOTOR_SPEED_MIN){
-								speed = DCMOTOR_SPEED_MIN;
-						}
-						
-						MoveForward(speed);
-												
-						break;
-						
-					// left steering
-					case KEY_LEFT:
-						steeringAngleValue -= STEERING_SERBO_DELTA;
-						if(steeringAngleValue >= STEERING_SERBO_MAX){
-								steeringAngleValue = STEERING_SERBO_MAX;
-						}else if(steeringAngleValue <= STEERING_SERBO_MIN){
-								steeringAngleValue = STEERING_SERBO_MIN;
-						}
-							
-						SetSteeringAngle(steeringAngleValue);					 
-						break;
-					
-					// right steering
-					case KEY_RIGHT:
-						steeringAngleValue += STEERING_SERBO_DELTA;
-						if(steeringAngleValue >= STEERING_SERBO_MAX){
-								steeringAngleValue = STEERING_SERBO_MAX;
-						}else if(steeringAngleValue <= STEERING_SERBO_MIN){
-								steeringAngleValue = STEERING_SERBO_MIN;
-						}
-						SetSteeringAngle(steeringAngleValue);								
-					
-						break;
-					
-					// left pan
-					case 'a':
-						panAngleValue += PAN_SERBO_DELTA;
+				SetSteeringAngle(steeringAngleValue);					 
+				break;
+			
+			// right steering
+			case KEY_RIGHT:
+				steeringAngleValue += STEERING_SERBO_DELTA;
+				if(steeringAngleValue >= STEERING_SERBO_MAX){
+						steeringAngleValue = STEERING_SERBO_MAX;
+				}else if(steeringAngleValue <= STEERING_SERBO_MIN){
+						steeringAngleValue = STEERING_SERBO_MIN;
+				}
+				SetSteeringAngle(steeringAngleValue);								
+			
+				break;
+			
+			// left pan
+			case 'a':
+				panAngleValue += PAN_SERBO_DELTA;
 
-						// Due to ratating direction, MIN/MAX switched
-						if(panAngleValue >= PAN_SERBO_MIN){
-								panAngleValue = PAN_SERBO_MIN;
-						}else if(panAngleValue <= PAN_SERBO_MAX){
-								panAngleValue = PAN_SERBO_MAX;
-						}
-						SetPanServoAngle(panAngleValue);
-					
-						break;
-					
-					// right pan
-					case 'd':
-						panAngleValue -= PAN_SERBO_DELTA;
+				// Due to ratating direction, MIN/MAX switched
+				if(panAngleValue >= PAN_SERBO_MIN){
+						panAngleValue = PAN_SERBO_MIN;
+				}else if(panAngleValue <= PAN_SERBO_MAX){
+						panAngleValue = PAN_SERBO_MAX;
+				}
+				SetPanServoAngle(panAngleValue);
+			
+				break;
+			
+			// right pan
+			case 'd':
+				panAngleValue -= PAN_SERBO_DELTA;
 
-						// Due to ratating direction, MIN/MAX switched
-						if(panAngleValue >= PAN_SERBO_MIN){
-								panAngleValue = PAN_SERBO_MIN;
-						}else if(panAngleValue <= PAN_SERBO_MAX){
-								panAngleValue = PAN_SERBO_MAX;
-						}
-						SetPanServoAngle(panAngleValue);
-					
-						break;
-					
-					// tilt up
-					case 'w':
-						tiltAngleValue -= TILT_SERBO_DELTA;
+				// Due to ratating direction, MIN/MAX switched
+				if(panAngleValue >= PAN_SERBO_MIN){
+						panAngleValue = PAN_SERBO_MIN;
+				}else if(panAngleValue <= PAN_SERBO_MAX){
+						panAngleValue = PAN_SERBO_MAX;
+				}
+				SetPanServoAngle(panAngleValue);
+			
+				break;
+			
+			// tilt up
+			case 'w':
+				tiltAngleValue -= TILT_SERBO_DELTA;
 
-						// Due to ratating direction, MIN/MAX switched
-						if(tiltAngleValue >= TILT_SERBO_MIN){
-								tiltAngleValue = TILT_SERBO_MIN;
-						}else if(tiltAngleValue <= TILT_SERBO_MAX){
-								tiltAngleValue = TILT_SERBO_MAX;
-						}
-						SetTiltServoAngle(tiltAngleValue);										
-						break;
-					
-					// tilt down 	
-					case 's':
-						tiltAngleValue += TILT_SERBO_DELTA;
+				// Due to ratating direction, MIN/MAX switched
+				if(tiltAngleValue >= TILT_SERBO_MIN){
+						tiltAngleValue = TILT_SERBO_MIN;
+				}else if(tiltAngleValue <= TILT_SERBO_MAX){
+						tiltAngleValue = TILT_SERBO_MAX;
+				}
+				SetTiltServoAngle(tiltAngleValue);										
+				break;
+			
+			// tilt down 	
+			case 's':
+				tiltAngleValue += TILT_SERBO_DELTA;
 
-						// Due to ratating direction, MIN/MAX switched
-						if(tiltAngleValue >= TILT_SERBO_MIN){
-								tiltAngleValue = TILT_SERBO_MIN;
-						}else if(tiltAngleValue <= TILT_SERBO_MAX){
-								tiltAngleValue = TILT_SERBO_MAX;
-						}
-						SetTiltServoAngle(tiltAngleValue);								
-						break;
-					
-					// speed up
-					case '+':
-						speed += DCMOTOR_SPEED_DELTA;
-						
-						if(speed >= DCMOTOR_SPEED_MAX){
-								speed = DCMOTOR_SPEED_MAX;
-						}else if(speed <= DCMOTOR_SPEED_MIN){
-								speed = DCMOTOR_SPEED_MIN;
-						}
-						break;
-					
-					// speed down
-					case '-':
-						speed -= DCMOTOR_SPEED_DELTA;
-						
-						if(speed >= DCMOTOR_SPEED_MAX){
-								speed = DCMOTOR_SPEED_MAX;
-						}else if(speed <= DCMOTOR_SPEED_MIN){
-								speed = DCMOTOR_SPEED_MIN;
-						}					
-						break;
-					case 'q':
-						loop = 0;
-						break;
-					default:
-						break;
-			}	
-			key = '\0';
+				// Due to ratating direction, MIN/MAX switched
+				if(tiltAngleValue >= TILT_SERBO_MIN){
+						tiltAngleValue = TILT_SERBO_MIN;
+				}else if(tiltAngleValue <= TILT_SERBO_MAX){
+						tiltAngleValue = TILT_SERBO_MAX;
+				}
+				SetTiltServoAngle(tiltAngleValue);								
+				break;
+			
+			// speed up
+			case '+':
+				speed += DCMOTOR_SPEED_DELTA;
+				
+				if(speed >= DCMOTOR_SPEED_MAX){
+						speed = DCMOTOR_SPEED_MAX;
+				}else if(speed <= DCMOTOR_SPEED_MIN){
+						speed = DCMOTOR_SPEED_MIN;
+				}
+				break;
+			
+			// speed down
+			case '-':
+				speed -= DCMOTOR_SPEED_DELTA;
+				
+				if(speed >= DCMOTOR_SPEED_MAX){
+						speed = DCMOTOR_SPEED_MAX;
+				}else if(speed <= DCMOTOR_SPEED_MIN){
+						speed = DCMOTOR_SPEED_MIN;
+				}					
+				break;
+			case 'q':
+				loop = 0;
+				break;
+			default:
+				break;
+		}	
+		key = '\0';
 	}
 	// pause();
 	Stop();

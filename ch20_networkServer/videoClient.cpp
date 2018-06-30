@@ -19,7 +19,7 @@ int main(int argc, char** argv)
     int         serverPort = 4097;
 
     if (argc < 3) {
-           std::cerr << "Usage: cv_video_cli <serverIP: 127.0.0.1> <serverPort:4097> " << std::endl;
+           std::cout << "Usage: cv_video_cli <serverIP: 127.0.0.1> <serverPort:4097> " << std::endl;
     }
 
     if(argc == 3){

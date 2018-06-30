@@ -11,6 +11,8 @@
 
 using namespace std;
 
+extern int draving(char *key);
+
 pthread_mutex_t frameLocker;
 pthread_t contolManagerThread;
 
@@ -26,7 +28,8 @@ void *controlManager(void *arg)
         if(results == -1 ){
             continue;
         }
-        fprintf(stdout, "controlManager: key value = %c\n", keyValue);
+        // fprintf(stdout, "controlManager: key value = %c\n", keyValue);
+        draving(&keyValue);
     }	
     pthread_exit((void *)0);
 }
