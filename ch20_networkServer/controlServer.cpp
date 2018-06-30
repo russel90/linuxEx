@@ -11,7 +11,10 @@
 
 using namespace std;
 
-extern int draving(char *key);
+extern "C" {
+    int driving(char *key);
+    int initialize(void);
+}
 
 pthread_mutex_t frameLocker;
 pthread_t contolManagerThread;
@@ -23,13 +26,16 @@ void *controlManager(void *arg)
     ssize_t results; 
     char keyValue;
 
+    // set pi car initial condition
+    initialize();
+
     while(keyValue != 'q'){
         results = recv( socket, (void *)&keyValue, sizeof(keyValue), MSG_WAITALL);
         if(results == -1 ){
             continue;
         }
         // fprintf(stdout, "controlManager: key value = %c\n", keyValue);
-        draving(&keyValue);
+        driving(&keyValue);
     }	
     pthread_exit((void *)0);
 }
