@@ -449,7 +449,7 @@ int driving(char *key)
 	}	
 }
 
-int close(void){
+int driving_close(void){
 	Stop();
 
 	//RESTART	
@@ -458,19 +458,19 @@ int close(void){
 	//SLEEP
 	reg_write8(MODE1, 0x10);
 
-	retrun 0;
-}
-
-int main(void)
-{
-    char key;
-    initialize();
-    setDrivingInitialCondition();
-    while(key != 'q'){
-        key = getchar();
-        driving(&key);
-    }
-    
-    close();
 	return 0;
 }
+
+// int main(void)
+// {
+//    char key;
+//    initialize();
+//    setDrivingInitialCondition();
+//    while(key != 'q'){
+//        key = getchar();
+//        driving(&key);
+//    }
+//    
+//    driving_close();
+//	return 0;
+// }

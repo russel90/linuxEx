@@ -15,7 +15,7 @@ extern "C" {
     int driving(char *key);
     int initialize(void);
     int setDrivingInitialCondition();
-    int close(void);
+    int driving_close(void);
 }
 
 pthread_mutex_t frameLocker;
@@ -41,7 +41,7 @@ void *controlManager(void *arg)
         driving(&keyValue);
         fprintf(stdout, "controlManager: key value = %c\n", keyValue);
     }
-    close();
+    driving_close();
     pthread_exit((void *)0);
 }
 
