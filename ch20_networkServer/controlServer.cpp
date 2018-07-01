@@ -14,6 +14,7 @@ using namespace std;
 extern "C" {
     int driving(char *key);
     int initialize(void);
+    int close(void);
 }
 
 pthread_mutex_t frameLocker;
@@ -34,9 +35,10 @@ void *controlManager(void *arg)
         if(results == -1 ){
             continue;
         }
-        // fprintf(stdout, "controlManager: key value = %c\n", keyValue);
         driving(&keyValue);
-    }	
+        fprintf(stdout, "controlManager: key value = %c\n", keyValue);
+    }
+    close();
     pthread_exit((void *)0);
 }
 

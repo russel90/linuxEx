@@ -244,17 +244,17 @@ int setDrivingInitialCondition()
 	// Pan Servo Postion: Middle
 	reg_write16(LED15_ON_L, 0);
 	reg_write16(LED15_OFF_L, PAN_SERBO_MID);
-	fprintf(stdout, "setDrivingInitialCondition: (0) 0 Degree\n");
+	fprintf(stdout, "setDrivingInitialCondition: Pan Servo Postion: Middle\n");
 	
 	// TILT Servo Postion: Middle
 	reg_write16(LED14_ON_L, 0);
 	reg_write16(LED14_OFF_L, TILT_SERBO_MID);
-	fprintf(stdout, "setDrivingInitialCondition: (0) 0 Degree\n");
+	fprintf(stdout, "setDrivingInitialCondition: TILT Servo Postion: Middle\n");
 	
 	// Steering Servo Postion: Middle
 	reg_write16(LED7_ON_L, 0);
 	reg_write16(LED7_OFF_L, STEERING_SERBO_MID);
-	fprintf(stdout, "setDrivingInitialCondition: (0) 0 Degree\n");	
+	fprintf(stdout, "setDrivingInitialCondition: Steering Servo Postion: Middle\n");	
 	
 	// DC Motor: Set Forward Direction
 	MoveForward(DCMOTOR_SPEED_MIN);
@@ -297,7 +297,6 @@ int initialize(void)
 	return 0;
 }
 
-
 int driving(char *key)
 {
 	unsigned short speed = DCMOTOR_SPEED_MIN;
@@ -310,7 +309,8 @@ int driving(char *key)
 			break;
 			
 		// backward 
-		case KEY_DOWN:
+		// case KEY_DOWN:
+		case '2':
 			if(GetDCMortorDirection() == FORWARD) speed = DCMOTOR_SPEED_MIN;
 			
 			speed += DCMOTOR_SPEED_DELTA;
@@ -325,7 +325,8 @@ int driving(char *key)
 			break;
 			
 		// forward	
-		case KEY_UP:		
+		// case KEY_UP:
+		case '8':		
 			if(GetDCMortorDirection() == BACKWARD) speed = DCMOTOR_SPEED_MIN;
 			
 			speed += DCMOTOR_SPEED_DELTA;
@@ -341,7 +342,8 @@ int driving(char *key)
 			break;
 			
 		// left steering
-		case KEY_LEFT:
+		// case KEY_LEFT:
+		case '4':
 			steeringAngleValue -= STEERING_SERBO_DELTA;
 			if(steeringAngleValue >= STEERING_SERBO_MAX){
 					steeringAngleValue = STEERING_SERBO_MAX;
@@ -353,7 +355,8 @@ int driving(char *key)
 			break;
 		
 		// right steering
-		case KEY_RIGHT:
+		// case KEY_RIGHT:
+		case '6':
 			steeringAngleValue += STEERING_SERBO_DELTA;
 			if(steeringAngleValue >= STEERING_SERBO_MAX){
 					steeringAngleValue = STEERING_SERBO_MAX;
@@ -444,4 +447,16 @@ int driving(char *key)
 		default:
 			break;
 	}	
+}
+
+int close(void){
+	Stop();
+	
+	//RESTART	
+	reg_write8(MODE1, 0x80);
+
+	//SLEEP
+	reg_write8(MODE1, 0x10);
+
+	retrun 0;
 }
