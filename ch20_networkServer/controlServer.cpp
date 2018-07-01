@@ -14,6 +14,7 @@ using namespace std;
 extern "C" {
     int driving(char *key);
     int initialize(void);
+    int setDrivingInitialCondition();
     int close(void);
 }
 
@@ -29,6 +30,8 @@ void *controlManager(void *arg)
 
     // set pi car initial condition
     initialize();
+    // Set initial Driving Condition
+    setDrivingInitialCondition();
 
     while(keyValue != 'q'){
         results = recv( socket, (void *)&keyValue, sizeof(keyValue), MSG_WAITALL);

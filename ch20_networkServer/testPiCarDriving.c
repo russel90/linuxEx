@@ -56,6 +56,11 @@ int fd;
 unsigned char buffer[3] = {0};
 int loop;
 
+unsigned short speed = DCMOTOR_SPEED_MIN;
+unsigned short steeringAngleValue = STEERING_SERBO_MID;
+unsigned short panAngleValue = PAN_SERBO_MID;
+unsigned short tiltAngleValue = TILT_SERBO_MID;
+
 int reg_read8(unsigned char addr)
 {
 	int length = 1;
@@ -291,19 +296,14 @@ int initialize(void)
     pca9685_restart();
 	pca9685_freq(freq);
 	
-	// Set initial Condition
-	setDrivingInitialCondition();
+	// Set initial Driving Condition
+	// setDrivingInitialCondition();
 	
 	return 0;
 }
 
 int driving(char *key)
 {
-	unsigned short speed = DCMOTOR_SPEED_MIN;
-	unsigned short steeringAngleValue = STEERING_SERBO_MID;
-	unsigned short panAngleValue = PAN_SERBO_MID;
-	unsigned short tiltAngleValue = TILT_SERBO_MID;
-	
 	switch(*key){
 		case ESC:
 			break;
@@ -451,7 +451,7 @@ int driving(char *key)
 
 int close(void){
 	Stop();
-	
+
 	//RESTART	
 	reg_write8(MODE1, 0x80);
 
@@ -459,4 +459,18 @@ int close(void){
 	reg_write8(MODE1, 0x10);
 
 	retrun 0;
+}
+
+int main(void)
+{
+    char key;
+    initialize();
+    setDrivingInitialCondition();
+    while(key != 'q'){
+        key = getchar();
+        driving(&key);
+    }
+    
+    close();
+	return 0;
 }
