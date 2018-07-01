@@ -182,15 +182,15 @@ int main(int argc, char** argv)
             return -1;
         }
 
-	    if (pthread_join( serverManagerThread, (void **)&status ) != 0 ){
-        // if (pthread_detach(serverManagerThread) != 0 ){
+	    // if (pthread_join( serverManagerThread, (void **)&status ) != 0 ){
+        if (pthread_detach(serverManagerThread) != 0 ){
     		fprintf(stderr, "main: serverManagerThread close error\n");
     	    return -1;
 	    }
     
 		// captureManagerThread pthread cancel succcess
-	    if (pthread_join(captureManagerThread, (void **)&status ) != 0 ){
-        // if (pthread_detach(captureManagerThread) != 0 ){
+	    // if (pthread_join(captureManagerThread, (void **)&status ) != 0 ){
+         if (pthread_detach(captureManagerThread) != 0 ){
 	    	fprintf(stderr, "main: captureManagerThread close error\n");
 	        return -1;
     	}
