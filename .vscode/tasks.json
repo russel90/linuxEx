@@ -6,24 +6,37 @@
         {
             "label": "build",
             "type": "shell",
-            "command": "g++",
+            "includePath": [
+                "${workspaceFolder}",
+                "/home/russel90/tlpi-book/lib",
+            ],            
+            "command": "gcc",        
             "args": [
-                // Ask msbuild to generate full paths for file names.
-                // "/property:GenerateFullPaths=true",
-                // "/t:build"
-                "-W", "${workspaceFolder}/${fileBasename}", 
-                //  "-o", "${workspaceFolder}/${filenamenoextension}",
+                "-g",
+                "-I/home/russel90/tlpi-book/lib",
+                "-pedantic",
+                "-Wall",
+                "-W",
+                "-Wmissing-prototypes",
+                "-Wno-sign-compare", 
+                "-Wno-unused-parameter",
+                // "${workspaceFolder}/${fileBasename}",
+                "${fileBasename}",
+                "/home/russel90/tlpi-book/libtlpi.a",
+                "-lm",
+                "-o",                
+                // "${workspaceFolder}/${fileBasenameNoExtension}", 
+                "${fileBasenameNoExtension}", 
+                "-lpthread"
             ],
             "group": {
                 "kind": "build",
-                "isDefault": true,
+                "isDefault": true
             },
             "presentation": {
-                // Reveal the output only if unrecognized errors occur.
                 "reveal": "always",
-                "panel": "shared",
+                "panel": "dedicated"
             },
-            // Use the standard MS compiler pattern to detect errors, warnings and infos
             "problemMatcher": "$msCompile"
         }
     ]

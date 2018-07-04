@@ -111,6 +111,7 @@ void *serverManager(void *arg)
        // if(cvWaitKey(wait)== 27) break;
     }
 	
+    cb.clear;
     pthread_exit((void *)0);
 }
 
